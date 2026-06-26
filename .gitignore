@@ -3,3 +3,6 @@ private_key.pem
 public_key.pem
 encrypted_files/
 decrypted_files/
+*_test_aes.py
+*_test_rsa.py
+*_test_sign.py

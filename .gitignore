@@ -1,0 +1,5 @@
+__pycache__/
+private_key.pem
+public_key.pem
+encrypted_files/
+decrypted_files/

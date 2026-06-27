@@ -119,8 +119,8 @@ def main():
         receiver_public_key,
         sender_private_key
     )
-
-    print("Pesan terenkripsi berhasil dikirim.\n")
+    print(packet)
+    #print("Pesan terenkripsi berhasil dikirim.\n")
 
     print("===== RECEIVER =====")
 

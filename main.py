@@ -16,47 +16,27 @@ from crypto.signature_utils import (
 )
 
 
-def main():
+def send_message(message, receiver_public_key, sender_private_key):
+    """
+    Simulasi sisi pengirim.
+    """
 
-    print("=== PEMBANGKITAN RSA KEY ===")
-
-    public_key, private_key = generate_rsa_keys()
-
-    print("RSA Key Pair berhasil dibuat.\n")
-
-
-    print("=== PEMBANGKITAN AES SESSION KEY ===")
-
+    # Generate AES Session Key
     session_key = generate_session_key()
 
-    print("Session Key berhasil dibuat.\n")
-
-
-    plaintext = "Halo, ini pesan rahasia."
-
-
-    print("=== ENKRIPSI PESAN (AES-GCM) ===")
-
+    # Encrypt Message
     nonce, ciphertext, tag = encrypt_message(
-        plaintext,
+        message,
         session_key
     )
 
-    print("Pesan berhasil dienkripsi.\n")
-
-
-    print("=== ENKRIPSI SESSION KEY (RSA-OAEP) ===")
-
+    # Encrypt Session Key
     encrypted_session_key = encrypt_session_key(
         session_key,
-        public_key
+        receiver_public_key
     )
 
-    print("Session Key berhasil dienkripsi.\n")
-
-
-    print("=== MEMBUAT PAKET DATA ===")
-
+    # Buat packet
     packet = (
         encrypted_session_key +
         nonce +
@@ -64,73 +44,93 @@ def main():
         tag
     )
 
-    print("Packet berhasil dibuat.\n")
-
-
-    print("=== DIGITAL SIGNATURE ===")
-
+    # Digital Signature
     signature = sign_data(
         packet,
-        private_key
+        sender_private_key
     )
 
-    print("Packet berhasil ditandatangani.\n")
+    return {
+        "encrypted_session_key": encrypted_session_key,
+        "nonce": nonce,
+        "ciphertext": ciphertext,
+        "tag": tag,
+        "signature": signature
+    }
 
 
-    print("=========== DATA DIKIRIM ===========")
+def receive_message(packet, receiver_private_key, sender_public_key):
+    """
+    Simulasi sisi penerima.
+    """
 
-    print(f"Encrypted Session Key : {encrypted_session_key.hex()}")
-    print(f"Nonce                 : {nonce.hex()}")
-    print(f"Ciphertext            : {ciphertext.hex()}")
-    print(f"Authentication Tag    : {tag.hex()}")
-    print(f"Digital Signature     : {signature.hex()}")
+    encrypted_session_key = packet["encrypted_session_key"]
+    nonce = packet["nonce"]
+    ciphertext = packet["ciphertext"]
+    tag = packet["tag"]
+    signature = packet["signature"]
 
-
-
-    print("\n=========== RECEIVER ===========")
-
-    received_packet = (
+    data = (
         encrypted_session_key +
         nonce +
         ciphertext +
         tag
     )
 
-
-    print("\nVerifikasi Digital Signature...")
-
+    # Verifikasi Signature
     if not verify_signature(
-        received_packet,
+        data,
         signature,
-        public_key
+        sender_public_key
     ):
-        print("Signature tidak valid!")
-        return
+        raise Exception("Digital Signature tidak valid!")
 
-    print("Signature valid.\n")
-
-
-    print("Mendekripsi Session Key...")
-
-    recovered_session_key = decrypt_session_key(
+    # Recover AES Session Key
+    session_key = decrypt_session_key(
         encrypted_session_key,
-        private_key
+        receiver_private_key
     )
 
-
-    print("Mendekripsi Ciphertext...")
-
-    recovered_plaintext = decrypt_message(
+    # Decrypt Message
+    plaintext = decrypt_message(
         nonce,
         ciphertext,
         tag,
-        recovered_session_key
+        session_key
     )
 
+    return plaintext
 
-    print("\n=========== HASIL ===========")
 
-    print("Plaintext :", recovered_plaintext)
+def main():
+
+    # Key milik sender
+    sender_public_key, sender_private_key = generate_rsa_keys()
+
+    # Key milik receiver
+    receiver_public_key, receiver_private_key = generate_rsa_keys()
+
+    message = "Halo, ini pesan rahasia."
+
+    print("===== SENDER =====")
+
+    packet = send_message(
+        message,
+        receiver_public_key,
+        sender_private_key
+    )
+
+    print("Pesan terenkripsi berhasil dikirim.\n")
+
+    print("===== RECEIVER =====")
+
+    plaintext = receive_message(
+        packet,
+        receiver_private_key,
+        sender_public_key
+    )
+
+    print(f"Pesan diterima: {plaintext}")
 
 
 if __name__ == "__main__":
